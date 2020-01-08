@@ -1,9 +1,10 @@
 {
  "allow_copy": 0, 
+ "allow_events_in_timeline": 0, 
  "allow_guest_to_view": 0, 
  "allow_import": 0, 
  "allow_rename": 0, 
- "autoname": "CA-.YY.-.####", 
+ "autoname": "NPO-CAPP-.YYYY.-.#####", 
  "beta": 0, 
  "creation": "2018-06-08 16:12:42.091729", 
  "custom": 0, 
@@ -282,7 +283,7 @@
  "issingle": 0, 
  "istable": 0, 
  "max_attachments": 0, 
- "modified": "2018-06-14 23:17:07.405689", 
+ "modified": "2018-11-04 03:36:35.337403", 
  "modified_by": "Administrator", 
  "module": "Non Profit", 
  "name": "Certification Application", 
@@ -307,33 +308,16 @@
    "share": 1, 
    "submit": 0, 
    "write": 1
-  }, 
-  {
-   "amend": 0, 
-   "cancel": 0, 
-   "create": 1, 
-   "delete": 0, 
-   "email": 1, 
-   "export": 0, 
-   "if_owner": 0, 
-   "import": 0, 
-   "permlevel": 0, 
-   "print": 1, 
-   "read": 1, 
-   "report": 0, 
-   "role": "Customer", 
-   "set_user_permissions": 0, 
-   "share": 1, 
-   "submit": 0, 
-   "write": 1
   }
  ], 
  "quick_entry": 0, 
  "read_only": 0, 
  "read_only_onload": 0, 
+ "restrict_to_domain": "Non Profit", 
  "show_name_in_global_search": 0, 
  "sort_field": "modified", 
  "sort_order": "DESC", 
  "track_changes": 1, 
- "track_seen": 0
+ "track_seen": 0, 
+ "track_views": 0
 }

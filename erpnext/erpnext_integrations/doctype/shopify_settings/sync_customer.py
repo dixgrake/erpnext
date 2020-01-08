@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import frappe
 from frappe import _
 
@@ -20,7 +21,7 @@ def create_customer(shopify_customer, shopify_settings):
 			"customer_type": _("Individual")
 		})
 		customer.flags.ignore_mandatory = True
-		customer.insert()
+		customer.insert(ignore_permissions=True)
 
 		if customer:
 			create_customer_address(customer, shopify_customer)

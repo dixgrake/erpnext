@@ -8,9 +8,12 @@ import unittest
 
 from erpnext.stock.doctype.batch.batch import get_batch_qty, UnableToSelectBatchError, get_batch_no
 from frappe.utils import cint
-
+from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import set_perpetual_inventory
 
 class TestBatch(unittest.TestCase):
+
+	def setUp(self):
+		set_perpetual_inventory(0)
 
 	def test_item_has_batch_enabled(self):
 		self.assertRaises(ValidationError, frappe.get_doc({
@@ -67,7 +70,10 @@ class TestBatch(unittest.TestCase):
 					rate = 10
 				)
 			]
-		)).insert()
+		))
+
+		stock_entry.set_stock_entry_type()
+		stock_entry.insert()
 		stock_entry.submit()
 
 		self.assertTrue(stock_entry.items[0].batch_no)
@@ -136,7 +142,10 @@ class TestBatch(unittest.TestCase):
 					s_warehouse=receipt.items[0].warehouse,
 				)
 			]
-		)).insert()
+		))
+
+		stock_entry.set_stock_entry_type()
+		stock_entry.insert()
 		stock_entry.submit()
 
 		# assert same batch is selected
@@ -176,7 +185,7 @@ class TestBatch(unittest.TestCase):
 				item = item_name,
 				batch_id = batch_name
 			)).insert(ignore_permissions=True)
-			batch.submit()
+			batch.save()
 
 		stock_entry = frappe.get_doc(dict(
 			doctype = 'Stock Entry',
@@ -193,7 +202,10 @@ class TestBatch(unittest.TestCase):
 					allow_zero_valuation_rate = 1
 				)
 			]
-		)).insert()
+		))
+
+		stock_entry.set_stock_entry_type()
+		stock_entry.insert()
 		stock_entry.submit()
 
 	def test_batch_name_with_naming_series(self):

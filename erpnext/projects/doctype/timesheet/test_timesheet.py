@@ -19,10 +19,10 @@ class TestTimesheet(unittest.TestCase):
 	def setUp(self):
 		for dt in ["Salary Slip", "Salary Structure", "Salary Structure Assignment", "Timesheet"]:
 			frappe.db.sql("delete from `tab%s`" % dt)
-		
-		from erpnext.hr.doctype.salary_slip.test_salary_slip import make_earning_salary_component
-		make_earning_salary_component(["Timesheet Component"])
-		
+
+		if not frappe.db.exists("Salary Component", "Timesheet Component"):
+			frappe.get_doc({"doctype": "Salary Component", "salary_component": "Timesheet Component"}).insert()
+
 
 	def test_timesheet_billing_amount(self):
 		make_salary_structure_for_timesheet("_T-Employee-00001")
@@ -103,8 +103,8 @@ class TestTimesheet(unittest.TestCase):
 			{
 				"billable": 1,
 				"activity_type": "_Test Activity Type",
-				"from_type": now_datetime(),
-				"hours": 3,
+				"from_time": now_datetime(),
+				"to_time": now_datetime() + datetime.timedelta(hours=3),
 				"company": "_Test Company"
 			}
 		)
@@ -113,8 +113,8 @@ class TestTimesheet(unittest.TestCase):
 			{
 				"billable": 1,
 				"activity_type": "_Test Activity Type",
-				"from_type": now_datetime(),
-				"hours": 3,
+				"from_time": now_datetime(),
+				"to_time": now_datetime() + datetime.timedelta(hours=3),
 				"company": "_Test Company"
 			}
 		)
@@ -128,6 +128,50 @@ class TestTimesheet(unittest.TestCase):
 		settings.ignore_employee_time_overlap = initial_setting
 		settings.save()
 
+	def test_timesheet_std_working_hours(self):
+		company = frappe.get_doc('Company', "_Test Company")
+		company.standard_working_hours = 8
+		company.save()
+
+		timesheet = frappe.new_doc("Timesheet")
+		timesheet.employee = "_T-Employee-00001"
+		timesheet.company = '_Test Company'
+		timesheet.append(
+			'time_logs',
+			{
+				"activity_type": "_Test Activity Type",
+				"from_time": now_datetime(),
+				"to_time": now_datetime() + datetime.timedelta(days= 4)
+			}
+		)
+		timesheet.save()
+
+		ts = frappe.get_doc('Timesheet', timesheet.name)
+		self.assertEqual(ts.total_hours, 32)
+		ts.submit()
+		ts.cancel()
+
+		company = frappe.get_doc('Company', "_Test Company")
+		company.standard_working_hours = 0
+		company.save()
+
+		timesheet = frappe.new_doc("Timesheet")
+		timesheet.employee = "_T-Employee-00001"
+		timesheet.company = '_Test Company'
+		timesheet.append(
+			'time_logs',
+			{
+				"activity_type": "_Test Activity Type",
+				"from_time": now_datetime(),
+				"to_time": now_datetime() + datetime.timedelta(days= 4)
+			}
+		)
+		timesheet.save()
+
+		ts = frappe.get_doc('Timesheet', timesheet.name)
+		self.assertEqual(ts.total_hours, 96)
+		ts.submit()
+		ts.cancel()
 
 def make_salary_structure_for_timesheet(employee):
 	salary_structure_name = "Timesheet Salary Structure Test"
@@ -142,6 +186,8 @@ def make_salary_structure_for_timesheet(employee):
 
 	if not frappe.db.get_value("Salary Structure Assignment",
 		{'employee':employee, 'docstatus': 1}):
+			frappe.db.set_value('Employee', employee, 'date_of_joining',
+				add_months(nowdate(), -5))
 			create_salary_structure_assignment(employee, salary_structure.name)
 
 	return salary_structure

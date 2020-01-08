@@ -51,27 +51,25 @@ class CropCycle(Document):
 		self.create_task(disease_doc.treatment_task, self.name, start_date)
 
 	def create_project(self, period, crop_tasks):
-		project = frappe.new_doc("Project")
-		project.update({
+		project = frappe.get_doc({
+			"doctype": "Project",
 			"project_name": self.title,
 			"expected_start_date": self.start_date,
 			"expected_end_date": add_days(self.start_date, period - 1)
-		})
-		project.insert()
+		}).insert()
 
 		return project.name
 
 	def create_task(self, crop_tasks, project_name, start_date):
 		for crop_task in crop_tasks:
-			task = frappe.new_doc("Task")
-			task.update({
+			frappe.get_doc({
+				"doctype": "Task",
 				"subject": crop_task.get("task_name"),
 				"priority": crop_task.get("priority"),
 				"project": project_name,
 				"exp_start_date": add_days(start_date, crop_task.get("start_day") - 1),
 				"exp_end_date": add_days(start_date, crop_task.get("end_day") - 1)
-			})
-			task.insert()
+			}).insert()
 
 	def reload_linked_analysis(self):
 		linked_doctypes = ['Soil Texture', 'Soil Analysis', 'Plant Analysis']
@@ -81,10 +79,10 @@ class CropCycle(Document):
 		for doctype in linked_doctypes:
 			output[doctype] = frappe.get_all(doctype, fields=required_fields)
 
-		output['Land Unit'] = []
+		output['Location'] = []
 
-		for land in self.linked_land_unit:
-			output['Land Unit'].append(frappe.get_doc('Land Unit', land.land_unit))
+		for location in self.linked_location:
+			output['Location'].append(frappe.get_doc('Location', location.location))
 
 		frappe.publish_realtime("List of Linked Docs",
 								output, user=frappe.session.user)
@@ -105,7 +103,7 @@ def get_geometry_type(doc):
 	return ast.literal_eval(doc.location).get('features')[0].get('geometry').get('type')
 
 
-def is_in_land_unit(point, vs):
+def is_in_location(point, vs):
 	x, y = point
 	inside = False
 

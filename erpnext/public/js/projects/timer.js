@@ -44,8 +44,8 @@ erpnext.timesheet.timer = function(frm, row, timestamp=0) {
 };
 
 erpnext.timesheet.control_timer = function(frm, dialog, row, timestamp=0) {
-	var $btn_start = $(".playpause .btn-start");
-	var $btn_complete = $(".playpause .btn-complete");
+	var $btn_start = dialog.$wrapper.find(".playpause .btn-start");
+	var $btn_complete = dialog.$wrapper.find(".playpause .btn-complete");
 	var interval = null;
 	var currentIncrement = timestamp;
 	var initialised = row ? true : false;
@@ -79,7 +79,7 @@ erpnext.timesheet.control_timer = function(frm, dialog, row, timestamp=0) {
 			let d = moment(row.from_time);
 			if(row.expected_hours) {
 				d.add(row.expected_hours, "hours");
-				row.to_time = d.format(moment.defaultDatetimeFormat);
+				row.to_time = d.format(frappe.defaultDatetimeFormat);
 			}
 			frm.refresh_field("time_logs");
 			frm.save();

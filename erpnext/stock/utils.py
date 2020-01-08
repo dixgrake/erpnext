@@ -11,41 +11,66 @@ from six import string_types
 
 class InvalidWarehouseCompany(frappe.ValidationError): pass
 
+def get_stock_value_from_bin(warehouse=None, item_code=None):
+	values = {}
+	conditions = ""
+	if warehouse:
+		conditions += """ and `tabBin`.warehouse in (
+						select w2.name from `tabWarehouse` w1
+						join `tabWarehouse` w2 on
+						w1.name = %(warehouse)s
+						and w2.lft between w1.lft and w1.rgt
+						) """
+
+		values['warehouse'] = warehouse
+
+	if item_code:
+		conditions += " and `tabBin`.item_code = %(item_code)s"
+
+		values['item_code'] = item_code
+
+	query = """select sum(stock_value) from `tabBin`, `tabItem` where 1 = 1
+		and `tabItem`.name = `tabBin`.item_code and ifnull(`tabItem`.disabled, 0) = 0 %s""" % conditions
+
+	stock_value = frappe.db.sql(query, values)
+
+	return stock_value
+
 def get_stock_value_on(warehouse=None, posting_date=None, item_code=None):
 	if not posting_date: posting_date = nowdate()
 
 	values, condition = [posting_date], ""
 
 	if warehouse:
-		
+
 		lft, rgt, is_group = frappe.db.get_value("Warehouse", warehouse, ["lft", "rgt", "is_group"])
-		
+
 		if is_group:
 			values.extend([lft, rgt])
 			condition += "and exists (\
 				select name from `tabWarehouse` wh where wh.name = sle.warehouse\
 				and wh.lft >= %s and wh.rgt <= %s)"
-		
+
 		else:
 			values.append(warehouse)
 			condition += " AND warehouse = %s"
 
 	if item_code:
 		values.append(item_code)
-		condition.append(" AND item_code = %s")
+		condition += " AND item_code = %s"
 
 	stock_ledger_entries = frappe.db.sql("""
 		SELECT item_code, stock_value, name, warehouse
 		FROM `tabStock Ledger Entry` sle
 		WHERE posting_date <= %s {0}
-		ORDER BY timestamp(posting_date, posting_time) DESC, name DESC
+		ORDER BY timestamp(posting_date, posting_time) DESC, creation DESC
 	""".format(condition), values, as_dict=1)
 
 	sle_map = {}
 	for sle in stock_ledger_entries:
 		if not (sle.item_code, sle.warehouse) in sle_map:
 			sle_map[(sle.item_code, sle.warehouse)] = flt(sle.stock_value)
-		
+
 	return sum(sle_map.values())
 
 @frappe.whitelist()
@@ -75,17 +100,17 @@ def get_latest_stock_qty(item_code, warehouse=None):
 	values, condition = [item_code], ""
 	if warehouse:
 		lft, rgt, is_group = frappe.db.get_value("Warehouse", warehouse, ["lft", "rgt", "is_group"])
-	
+
 		if is_group:
 			values.extend([lft, rgt])
 			condition += "and exists (\
 				select name from `tabWarehouse` wh where wh.name = tabBin.warehouse\
 				and wh.lft >= %s and wh.rgt <= %s)"
-	
+
 		else:
 			values.append(warehouse)
 			condition += " AND warehouse = %s"
-	
+
 	actual_qty = frappe.db.sql("""select sum(actual_qty) from tabBin
 		where item_code=%s {0}""".format(condition), values)[0][0]
 
@@ -149,7 +174,7 @@ def get_incoming_rate(args, raise_error_if_no_rate=True):
 		in_rate = get_valuation_rate(args.get('item_code'), args.get('warehouse'),
 			args.get('voucher_type'), voucher_no, args.get('allow_zero_valuation'),
 			currency=erpnext.get_company_currency(args.get('company')), company=args.get('company'),
-			raise_error_if_no_rate=True)
+			raise_error_if_no_rate=raise_error_if_no_rate)
 
 	return in_rate
 
@@ -222,4 +247,86 @@ def validate_warehouse_company(warehouse, company):
 def is_group_warehouse(warehouse):
 	if frappe.db.get_value("Warehouse", warehouse, "is_group"):
 		frappe.throw(_("Group node warehouse is not allowed to select for transactions"))
-	
+
+def update_included_uom_in_report(columns, result, include_uom, conversion_factors):
+	if not include_uom or not conversion_factors:
+		return
+
+	convertible_cols = {}
+
+	is_dict_obj = False
+	if isinstance(result[0], dict):
+		is_dict_obj = True
+
+	convertible_columns = {}
+	for idx, d in enumerate(columns):
+		key = d.get("fieldname") if is_dict_obj else idx
+		if d.get("convertible"):
+			convertible_columns.setdefault(key, d.get("convertible"))
+
+			# Add new column to show qty/rate as per the selected UOM
+			columns.insert(idx+1, {
+				'label': "{0} (per {1})".format(d.get("label"), include_uom),
+				'fieldname': "{0}_{1}".format(d.get("fieldname"), frappe.scrub(include_uom)),
+				'fieldtype': 'Currency' if d.get("convertible") == 'rate' else 'Float'
+			})
+
+	update_dict_values = []
+	for row_idx, row in enumerate(result):
+		data = row.items() if is_dict_obj else enumerate(row)
+		for key, value in data:
+			if not key in convertible_columns or not conversion_factors[row_idx]:
+				continue
+
+			if convertible_columns.get(key) == 'rate':
+				new_value = flt(value) * conversion_factors[row_idx]
+			else:
+				new_value = flt(value) / conversion_factors[row_idx]
+
+			if not is_dict_obj:
+				row.insert(key+1, new_value)
+			else:
+				new_key = "{0}_{1}".format(key, frappe.scrub(include_uom))
+				update_dict_values.append([row, new_key, new_value])
+
+	for data in update_dict_values:
+		row, key, value = data
+		row[key] = value
+
+def get_available_serial_nos(args):
+	return frappe.db.sql(""" SELECT name from `tabSerial No`
+		WHERE item_code = %(item_code)s and warehouse = %(warehouse)s
+		 and timestamp(purchase_date, purchase_time) <= timestamp(%(posting_date)s, %(posting_time)s)
+	""", args, as_dict=1)
+
+def add_additional_uom_columns(columns, result, include_uom, conversion_factors):
+	if not include_uom or not conversion_factors:
+		return
+
+	convertible_column_map = {}
+	for col_idx in list(reversed(range(0, len(columns)))):
+		col = columns[col_idx]
+		if isinstance(col, dict) and col.get('convertible') in ['rate', 'qty']:
+			next_col = col_idx + 1
+			columns.insert(next_col, col.copy())
+			columns[next_col]['fieldname'] += '_alt'
+			convertible_column_map[col.get('fieldname')] = frappe._dict({
+				'converted_col': columns[next_col]['fieldname'],
+				'for_type': col.get('convertible')
+			})
+			if col.get('convertible') == 'rate':
+				columns[next_col]['label'] += ' (per {})'.format(include_uom)
+			else:
+				columns[next_col]['label'] += ' ({})'.format(include_uom)
+
+	for row_idx, row in enumerate(result):
+		for convertible_col, data in convertible_column_map.items():
+			conversion_factor = conversion_factors[row.get('item_code')] or 1
+			for_type = data.for_type
+			value_before_conversion = row.get(convertible_col)
+			if for_type == 'rate':
+				row[data.converted_col] = flt(value_before_conversion) * conversion_factor
+			else:
+				row[data.converted_col] = flt(value_before_conversion) / conversion_factor
+
+		result[row_idx] = row

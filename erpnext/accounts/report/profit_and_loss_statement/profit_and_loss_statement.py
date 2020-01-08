@@ -39,7 +39,7 @@ def get_net_profit_loss(income, expense, period_list, company, currency=None, co
 		"account_name": "'" + _("Profit for the year") + "'",
 		"account": "'" + _("Profit for the year") + "'",
 		"warn_if_negative": True,
-		"currency": currency or frappe.db.get_value("Company", company, "default_currency")
+		"currency": currency or frappe.get_cached_value('Company',  company,  "default_currency")
 	}
 
 	has_value = False
@@ -75,11 +75,11 @@ def get_chart_data(filters, columns, income, expense, net_profit_loss):
 
 	datasets = []
 	if income_data:
-		datasets.append({'name': 'Income', 'values': income_data})
+		datasets.append({'name': _('Income'), 'values': income_data})
 	if expense_data:
-		datasets.append({'name': 'Expense', 'values': expense_data})
+		datasets.append({'name': _('Expense'), 'values': expense_data})
 	if net_profit:
-		datasets.append({'name': 'Net Profit/Loss', 'values': net_profit})
+		datasets.append({'name': _('Net Profit/Loss'), 'values': net_profit})
 
 	chart = {
 		"data": {
@@ -92,5 +92,7 @@ def get_chart_data(filters, columns, income, expense, net_profit_loss):
 		chart["type"] = "bar"
 	else:
 		chart["type"] = "line"
+
+	chart["fieldtype"] = "Currency"
 
 	return chart

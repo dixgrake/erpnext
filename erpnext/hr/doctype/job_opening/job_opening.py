@@ -25,7 +25,7 @@ class JobOpening(WebsiteGenerator):
 	def validate_current_vacancies(self):
 		if not self.staffing_plan:
 			staffing_plan = get_active_staffing_plan_details(self.company,
-				self.designation, self.department)
+				self.designation)
 			if staffing_plan:
 				self.staffing_plan = staffing_plan[0].name
 				self.planned_vacancies = staffing_plan[0].vacancies
@@ -37,7 +37,7 @@ class JobOpening(WebsiteGenerator):
 
 		if self.staffing_plan and self.planned_vacancies:
 			staffing_plan_company = frappe.db.get_value("Staffing Plan", self.staffing_plan, "company")
-			lft, rgt = frappe.db.get_value("Company", staffing_plan_company, ["lft", "rgt"])
+			lft, rgt = frappe.get_cached_value('Company',  staffing_plan_company,  ["lft", "rgt"])
 
 			designation_counts = get_designation_counts(self.designation, self.company)
 			current_count = designation_counts['employee_count'] + designation_counts['job_openings']
@@ -53,3 +53,26 @@ class JobOpening(WebsiteGenerator):
 def get_list_context(context):
 	context.title = _("Jobs")
 	context.introduction = _('Current Job Openings')
+	context.get_list = get_job_openings
+
+def get_job_openings(doctype, txt=None, filters=None, limit_start=0, limit_page_length=20, order_by=None):
+	fields = ['name', 'status', 'job_title', 'description']
+
+	filters = filters or {}
+	filters.update({
+		'status': 'Open'
+	})
+
+	if txt:
+		filters.update({
+			'job_title': ['like', '%{0}%'.format(txt)],
+			'description': ['like', '%{0}%'.format(txt)]
+		})
+
+	return frappe.get_all(doctype,
+		filters,
+		fields,
+		start=limit_start,
+		page_length=limit_page_length,
+		order_by=order_by
+	)

@@ -1,68 +1,47 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-
+about: Report a bug encountered while using ERPNext
+labels: bug
 ---
 
-Issue: Bug report
+<!--
+Welcome to ERPNext issue tracker! Before creating an issue, please heed the following:
 
-Our project, as you've probably heard, is getting really popular and truth is we're getting a bit overwhelmed by the activity surrounding it. There are just too many issues for us to manage properly.
+1. This tracker should only be used to report bugs and request features / enhancements to ERPNext
+    - For questions and general support, checkout the manual https://erpnext.com/docs/user/manual/en or use https://discuss.erpnext.com
+    - For documentation issues, refer to https://github.com/frappe/erpnext_com
+2. Use the search function before creating a new issue. Duplicates will be closed and directed to
+   the original discussion.
+3. When making a bug report, make sure you provide all required information. The easier it is for
+   maintainers to reproduce, the faster it'll be fixed.
+4. If you think you know what the reason for the bug is, share it with us. Maybe put in a PR 😉
+-->
 
-**Do the checklist before filing an issue:**
- - [ ] Have a usage question? Ask your question on  [Discuss Forum](https://discuss.erpnext.com). We use [Discuss Forum](https://discuss.erpnext.com) for usage question and GitHub for bugs.
- - [ ] Can you replicate the issue? 
- - [ ] Is this something you can debug and fix? Send a pull request! Bug fixes and documentation fixes are welcome
+## Description of the issue
 
-**Describe the bug** :chart_with_downwards_trend: 
-A clear and concise description of what the bug is.
+## Context information (for bug reports)
 
-**To Reproduce** :page_with_curl:
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Output of `bench version`**
+```
+(paste here)
+```
 
-**Expected behavior** :chart_with_upwards_trend:
-A clear and concise description of what you expected to happen.
+## Steps to reproduce the issue
 
-**Screenshots** :crystal_ball:
-If applicable, add screenshots to help explain your problem.
+1.
+2.
+3.
 
-**Desktop (please complete the following information):** :cyclone:
- - OS:
-    - [ ] Linux
-    - [ ] macOS
-    - [ ] Windows
-    - [ ] Others? Please mention: 
- - Browser:
-    - [ ] Safari
-    - [ ] Chrome
-    - [ ] Firefox
-    - [ ] Other? Please mention: 
+### Observed result
 
-**Smartphone (please complete the following information):** :iphone: :computer:
- - Device:
-    - [ ] iPhone
-    - [ ] Android
- - Browser:
-    - [ ] Safari
-    - [ ] Chrome
-    - [ ] Firefox
-    - [ ] Other? Please mention: 
+### Expected result
 
-**Version Information**
-- Which branch are you on?
-    - [ ] `master` :star2: 
-    - [ ] `develop` :fire:
-- Frappe Version: 
-- ERPNext Version: 
+### Stacktrace / full error message
 
-**Additional context** :page_facing_up:
-Add any other context about the problem here.
+```
+(paste here)
+```
 
-**Possible Solution** :bookmark_tabs:
-Any idea what might be causing the issue. Or if you have a proposed solution to the problem,
+## Additional information
 
-**Please don't be intimidated by the long list of options you've to fill. Try to fill out as much as you can. Remember, the more the information the easier it is for us to replicate and fix the issue** :grin: 
-
+OS version / distribution, `ERPNext` install method, etc.

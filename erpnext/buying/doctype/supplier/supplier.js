@@ -17,6 +17,13 @@ frappe.ui.form.on("Supplier", {
 				}
 			}
 		});
+		frm.set_query("default_bank_account", function() {
+			return {
+				filters: {
+					"is_company_account":1
+				}
+			}
+		});
 	},
 	refresh: function (frm) {
 		frappe.dynamic_link = { doc: frm.doc, fieldname: 'name', doctype: 'Supplier' }
@@ -39,10 +46,19 @@ frappe.ui.form.on("Supplier", {
 			frm.add_custom_button(__('Accounting Ledger'), function () {
 				frappe.set_route('query-report', 'General Ledger',
 					{ party_type: 'Supplier', party: frm.doc.name });
-			});
+			}, __("View"));
+
 			frm.add_custom_button(__('Accounts Payable'), function () {
 				frappe.set_route('query-report', 'Accounts Payable', { supplier: frm.doc.name });
-			});
+			}, __("View"));
+
+			frm.add_custom_button(__('Bank Account'), function () {
+				erpnext.utils.make_bank_account(frm.doc.doctype, frm.doc.name);
+			}, __('Create'));
+
+			frm.add_custom_button(__('Pricing Rule'), function () {
+				erpnext.utils.make_pricing_rule(frm.doc.doctype, frm.doc.name);
+			}, __('Create'));
 
 			// indicators
 			erpnext.utils.set_party_dashboard_indicators(frm);

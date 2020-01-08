@@ -1,14 +1,16 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
+from __future__ import unicode_literals
 
 
 import frappe, os, json
 from frappe.utils import cstr
 from unidecode import unidecode
 from six import iteritems
+from frappe.utils.nestedset import rebuild_tree
 
-def create_charts(company, chart_template=None, existing_company=None):
-	chart = get_chart(chart_template, existing_company)
+def create_charts(company, chart_template=None, existing_company=None, custom_chart=None):
+	chart = custom_chart or get_chart(chart_template, existing_company)
 	if chart:
 		accounts = []
 
@@ -38,7 +40,7 @@ def create_charts(company, chart_template=None, existing_company=None):
 						"report_type": report_type,
 						"account_number": account_number,
 						"account_type": child.get("account_type"),
-						"account_currency": frappe.db.get_value("Company", company, "default_currency"),
+						"account_currency": child.get('account_currency') or frappe.db.get_value('Company',  company,  "default_currency"),
 						"tax_rate": child.get("tax_rate")
 					})
 
@@ -53,7 +55,12 @@ def create_charts(company, chart_template=None, existing_company=None):
 
 					_import_accounts(child, account.name, root_type)
 
+		# Rebuild NestedSet HSM tree for Account Doctype
+		# after all accounts are already inserted.
+		frappe.local.flags.ignore_on_update = True
 		_import_accounts(chart, None, None, root_account=True)
+		rebuild_tree("Account", "parent_account")
+		frappe.local.flags.ignore_on_update = False
 
 def add_suffix_if_duplicate(account_name, account_number, accounts):
 	if account_number:
@@ -198,3 +205,30 @@ def validate_bank_account(coa, bank_account):
 		_get_account_names(chart)
 
 	return (bank_account in accounts)
+
+@frappe.whitelist()
+def build_tree_from_json(chart_template, chart_data=None):
+	''' get chart template from its folder and parse the json to be rendered as tree '''
+	chart = chart_data or get_chart(chart_template)
+
+	# if no template selected, return as it is
+	if not chart:
+		return
+
+	accounts = []
+	def _import_accounts(children, parent):
+		''' recursively called to form a parent-child based list of dict from chart template '''
+		for account_name, child in iteritems(children):
+			account = {}
+			if account_name in ["account_number", "account_type",\
+				"root_type", "is_group", "tax_rate"]: continue
+
+			account['parent_account'] = parent
+			account['expandable'] = True if identify_is_group(child) else False
+			account['value'] = (child.get('account_number') + ' - ' + account_name) \
+				if child.get('account_number') else account_name
+			accounts.append(account)
+			_import_accounts(child, account['value'])
+
+	_import_accounts(chart, None)
+	return accounts

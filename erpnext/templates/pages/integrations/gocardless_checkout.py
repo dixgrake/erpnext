@@ -9,7 +9,6 @@ from erpnext.erpnext_integrations.doctype.gocardless_settings.gocardless_setting
 from frappe.utils import get_url
 
 no_cache = 1
-no_sitemap = 1
 
 expected_keys = ('amount', 'title', 'description', 'reference_doctype', 'reference_docname',
 	'payer_name', 'payer_email', 'order_id', 'currency')
@@ -46,8 +45,10 @@ def check_mandate(data, reference_doctype, reference_docname):
 		prefilled_customer = {
 			"company_name": payer.name,
 			"given_name": primary_contact.first_name,
-			"family_name": primary_contact.last_name,
 		}
+		if primary_contact.last_name is not None:
+			prefilled_customer.update({"family_name": primary_contact.last_name})
+
 		if primary_contact.email_id is not None:
 			prefilled_customer.update({"email": primary_contact.email_id})
 		else:

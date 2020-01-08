@@ -3,7 +3,7 @@
 
 from __future__ import unicode_literals
 import frappe, erpnext
-from frappe.utils import cint
+from frappe.utils import cint, nowdate
 from frappe import throw, _
 from frappe.utils.nestedset import NestedSet
 from erpnext.stock import get_warehouse_account
@@ -14,7 +14,7 @@ class Warehouse(NestedSet):
 
 	def autoname(self):
 		if self.company:
-			suffix = " - " + frappe.db.get_value("Company", self.company, "abbr")
+			suffix = " - " + frappe.get_cached_value('Company',  self.company,  "abbr")
 			if not self.warehouse_name.endswith(suffix):
 				self.name = self.warehouse_name + suffix
 		else:
@@ -22,10 +22,11 @@ class Warehouse(NestedSet):
 
 	def onload(self):
 		'''load account name for General Ledger Report'''
-		account = self.account or get_warehouse_account(self)
+		if self.company and cint(frappe.db.get_value("Company", self.company, "enable_perpetual_inventory")):
+			account = self.account or get_warehouse_account(self)
 
-		if account:
-			self.set_onload('account', account)
+			if account:
+				self.set_onload('account', account)
 		load_address_and_contact(self)
 
 
@@ -87,7 +88,7 @@ class Warehouse(NestedSet):
 			self.recalculate_bin_qty(new_name)
 
 	def get_new_warehouse_name_without_abbr(self, name):
-		company_abbr = frappe.db.get_value("Company", self.company, "abbr")
+		company_abbr = frappe.get_cached_value('Company',  self.company,  "abbr")
 		parts = name.rsplit(" - ", 1)
 
 		if parts[-1].lower() == company_abbr.lower():
@@ -139,7 +140,7 @@ class Warehouse(NestedSet):
 
 @frappe.whitelist()
 def get_children(doctype, parent=None, company=None, is_root=False):
-	from erpnext.stock.utils import get_stock_value_on
+	from erpnext.stock.utils import get_stock_value_from_bin
 
 	if is_root:
 		parent = ""
@@ -155,8 +156,9 @@ def get_children(doctype, parent=None, company=None, is_root=False):
 
 	# return warehouses
 	for wh in warehouses:
-		wh["balance"] = get_stock_value_on(warehouse=wh.value)
-
+		wh["balance"] = get_stock_value_from_bin(warehouse=wh.value)
+		if company:
+			wh["company_currency"] = frappe.db.get_value('Company', company, 'default_currency')
 	return warehouses
 
 @frappe.whitelist()
@@ -173,3 +175,9 @@ def add_node():
 def convert_to_group_or_ledger():
 	args = frappe.form_dict
 	return frappe.get_doc("Warehouse", args.docname).convert_to_group_or_ledger()
+
+def get_child_warehouses(warehouse):
+	p_warehouse = frappe.get_doc("Warehouse", warehouse)
+
+	return frappe.db.sql_list("""select name from `tabWarehouse`
+		where lft >= %s and rgt =< %s""", (p_warehouse.lft, p_warehouse.rgt))

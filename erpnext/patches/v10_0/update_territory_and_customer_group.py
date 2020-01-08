@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import frappe
 from frappe.model.rename_doc import get_fetch_fields
 
@@ -15,8 +16,8 @@ def execute():
 				value = frappe.db.escape(frappe.as_unicode(customer.get("customer_group")))
 
 				when_then.append('''
-					WHEN `%s` = "%s" and %s != "%s"
-					THEN "%s"
+					WHEN `%s` = %s and %s != %s
+					THEN %s
 				'''%(d["master_fieldname"], frappe.db.escape(frappe.as_unicode(customer.name)),
 					d["linked_to_fieldname"], value, value))
 

@@ -6,6 +6,7 @@ import frappe
 from frappe.model.document import Document
 from erpnext.stock.doctype.quality_inspection_template.quality_inspection_template \
 	import get_template_details
+from frappe.model.mapper import get_mapped_doc
 
 class QualityInspection(Document):
 	def validate(self):
@@ -61,20 +62,60 @@ def item_query(doctype, txt, searchfield, start, page_len, filters):
 	if filters.get("from"):
 		from frappe.desk.reportview import get_match_cond
 		mcond = get_match_cond(filters["from"])
-		cond = ""
+		cond, qi_condition = "", "and (quality_inspection is null or quality_inspection = '')"
 
-		if filters.get('from') in ['Purchase Invoice Item', 'Purchase Receipt Item']:
+		if filters.get('from') in ['Purchase Invoice Item', 'Purchase Receipt Item']\
+				and filters.get("inspection_type") != "In Process":
 			cond = """and item_code in (select name from `tabItem` where
 				inspection_required_before_purchase = 1)"""
-		elif filters.get('from') in ['Sales Invoice Item', 'Delivery Note Item']:
+		elif filters.get('from') in ['Sales Invoice Item', 'Delivery Note Item']\
+				and filters.get("inspection_type") != "In Process":
 			cond = """and item_code in (select name from `tabItem` where
 				inspection_required_before_delivery = 1)"""
 		elif filters.get('from') == 'Stock Entry Detail':
 			cond = """and s_warehouse is null"""
 
+		if filters.get('from') in ['Supplier Quotation Item']:
+			qi_condition = ""
+
 		return frappe.db.sql(""" select item_code from `tab{doc}`
 			where parent=%(parent)s and docstatus < 2 and item_code like %(txt)s
-			and (quality_inspection is null or quality_inspection = '')
-			{cond} {mcond} order by item_code limit {start}, {page_len}""".format(doc=filters.get('from'),
-			parent=filters.get('parent'), cond=cond, mcond=mcond, start=start, page_len = page_len),
+			{qi_condition} {cond} {mcond}
+			order by item_code limit {start}, {page_len}""".format(doc=filters.get('from'),
+			parent=filters.get('parent'), cond = cond, mcond = mcond, start = start,
+			page_len = page_len, qi_condition = qi_condition),
 			{'parent': filters.get('parent'), 'txt': "%%%s%%" % txt})
+
+def quality_inspection_query(doctype, txt, searchfield, start, page_len, filters):
+	return frappe.get_all('Quality Inspection',
+		limit_start=start,
+		limit_page_length=page_len,
+		filters = {
+			'docstatus': 1,
+			'name': ('like', '%%%s%%' % txt),
+			'item_code': filters.get("item_code"),
+			'reference_name': ('in', [filters.get("reference_name", ''), ''])
+		}, as_list=1)
+
+@frappe.whitelist()
+def make_quality_inspection(source_name, target_doc=None):
+	def postprocess(source, doc):
+		doc.inspected_by = frappe.session.user
+		doc.get_quality_inspection_template()
+
+	doc = get_mapped_doc("BOM", source_name, {
+		'BOM': {
+			"doctype": "Quality Inspection",
+			"validation": {
+				"docstatus": ["=", 1]
+			},
+			"field_map": {
+				"name": "bom_no",
+				"item": "item_code",
+				"stock_uom": "uom",
+				"stock_qty": "qty"
+			},
+		}
+	}, target_doc, postprocess)
+
+	return doc

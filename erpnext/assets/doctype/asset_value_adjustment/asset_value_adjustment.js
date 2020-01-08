@@ -13,7 +13,11 @@ frappe.ui.form.on('Asset Value Adjustment', {
 			}
 		});
 	},
-
+	onload: function(frm) {
+		if(frm.is_new() && frm.doc.asset) {
+			frm.trigger("set_current_asset_value");
+		}
+	},
 	asset: function(frm) {
 		frm.trigger("set_current_asset_value");
 	},
@@ -23,9 +27,9 @@ frappe.ui.form.on('Asset Value Adjustment', {
 	},
 
 	set_current_asset_value: function(frm) {
-		if (frm.doc.finance_book && frm.doc.asset) {
+		if (frm.doc.asset) {
 			frm.call({
-				method: "erpnext.assets.doctype.asset_adjustment.asset_adjustment.get_current_asset_value",
+				method: "erpnext.assets.doctype.asset_value_adjustment.asset_value_adjustment.get_current_asset_value",
 				args: {
 					asset: frm.doc.asset,
 					finance_book: frm.doc.finance_book

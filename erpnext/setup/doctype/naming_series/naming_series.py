@@ -34,7 +34,14 @@ class NamingSeries(Document):
 			if options:
 				prefixes = prefixes + "\n" + options
 		prefixes.replace("\n\n", "\n")
-		prefixes = "\n".join(sorted(prefixes.split("\n")))
+		prefixes = prefixes.split("\n")
+
+		custom_prefixes = frappe.get_all('DocType', fields=["autoname"],
+			filters={"name": ('not in', doctypes), "autoname":('like', '%.#%'), 'module': ('not in', ['Core'])})
+		if custom_prefixes:
+			prefixes = prefixes + [d.autoname.rsplit('.', 1)[0] for d in custom_prefixes]
+
+		prefixes = "\n".join(sorted(prefixes))
 
 		return {
 			"transactions": "\n".join([''] + sorted(doctypes)),
@@ -42,7 +49,7 @@ class NamingSeries(Document):
 		}
 
 	def scrub_options_list(self, ol):
-		options = filter(lambda x: x, [cstr(n).strip() for n in ol])
+		options = list(filter(lambda x: x, [cstr(n).strip() for n in ol]))
 		return options
 
 	def update_series(self, arg=None):
@@ -128,8 +135,8 @@ class NamingSeries(Document):
 
 	def validate_series_name(self, n):
 		import re
-		if not re.match("^[\w\- /.#]*$", n, re.UNICODE):
-			throw(_('Special Characters except "-", "#", "." and "/" not allowed in naming series'))
+		if not re.match("^[\w\- /.#{}]*$", n, re.UNICODE):
+			throw(_('Special Characters except "-", "#", ".", "/", "{" and "}" not allowed in naming series'))
 
 	def get_options(self, arg=None):
 		if frappe.get_meta(arg or self.select_doc_for_series).get_field("naming_series"):
@@ -144,7 +151,7 @@ class NamingSeries(Document):
 
 	def insert_series(self, series):
 		"""insert series if missing"""
-		if not frappe.db.get_value('Series', series, 'name', order_by="name"):
+		if frappe.db.get_value('Series', series, 'name', order_by="name") == None:
 			frappe.db.sql("insert into tabSeries (name, current) values (%s, 0)", (series))
 
 	def update_series_start(self):
@@ -159,13 +166,12 @@ class NamingSeries(Document):
 
 	def parse_naming_series(self):
 		parts = self.prefix.split('.')
-		# If series contain date format like INV.YYYY.MM.#####
-		if len(parts) > 2:
-			del parts[-1] # Removed ### from the series
-			prefix = parse_naming_series(parts)
-		else:
-			prefix = parts[0]
 
+		# Remove ### from the end of series
+		if parts[-1] == "#" * len(parts[-1]):
+			del parts[-1]
+
+		prefix = parse_naming_series(parts)
 		return prefix
 
 def set_by_naming_series(doctype, fieldname, naming_series, hide_name_field=True):

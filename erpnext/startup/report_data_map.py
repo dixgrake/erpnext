@@ -79,7 +79,7 @@ data_map = {
 			"actual_qty as qty", "voucher_type", "voucher_no", "project",
 			"incoming_rate as incoming_rate", "stock_uom", "serial_no",
 			"qty_after_transaction", "valuation_rate"],
-		"order_by": "posting_date, posting_time, name",
+		"order_by": "posting_date, posting_time, creation",
 		"links": {
 			"item_code": ["Item", "name"],
 			"warehouse": ["Warehouse", "name"],
@@ -298,14 +298,14 @@ data_map = {
 		}
 	},
 	"Patient Appointment": {
-		"columns": ["name", "appointment_type", "patient", "physician", "appointment_date", "department", "status", "company"],
+		"columns": ["name", "appointment_type", "patient", "practitioner", "appointment_date", "department", "status", "company"],
 		"order_by": "name",
 		"links": {
-			"physician": ["Physician", "name"],
+			"practitioner": ["Healthcare Practitioner", "name"],
 			"appointment_type": ["Appointment Type", "name"]
 		}
 	},
-	"Physician": {
+	"Healthcare Practitioner": {
 		"columns": ["name", "department"],
 		"order_by": "name",
 		"links": {

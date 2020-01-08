@@ -21,31 +21,16 @@ class ShopifySettings(Document):
 		else:
 			self.unregister_webhooks()
 
-		self.validate_app_type()
-
 	def validate_access_credentials(self):
-		if self.app_type == "Private":
-			if not (self.get_password(raise_exception=False) and self.api_key and self.shopify_url):
-				frappe.msgprint(_("Missing value for Password, API Key or Shopify URL"), raise_exception=frappe.ValidationError)
-
-		else:
-			if not (self.access_token and self.shopify_url):
-				frappe.msgprint(_("Access token or Shopify URL missing"), raise_exception=frappe.ValidationError)
-
-	def validate_app_type(self):
-		if self.app_type == "Public":
-			frappe.throw(_("Support for public app is deprecated. Please setup private app, for more details refer user manual"))
+		if not (self.get_password(raise_exception=False) and self.api_key and self.shopify_url):
+			frappe.msgprint(_("Missing value for Password, API Key or Shopify URL"), raise_exception=frappe.ValidationError)
 
 	def register_webhooks(self):
 		webhooks = ["orders/create", "orders/paid", "orders/fulfilled"]
-
-		url = get_shopify_url('admin/webhooks.json', self)
+		# url = get_shopify_url('admin/webhooks.json', self)
 		created_webhooks = [d.method for d in self.webhooks]
-
+		url = get_shopify_url('admin/api/2019-04/webhooks.json', self)
 		for method in webhooks:
-			if method in created_webhooks:
-				continue
-
 			session = get_request_session()
 			try:
 				d = session.post(url, data=json.dumps({
@@ -58,21 +43,20 @@ class ShopifySettings(Document):
 				d.raise_for_status()
 				self.update_webhook_table(method, d.json())
 			except Exception as e:
-				make_shopify_log(status="Warning", method="register_webhooks",
-					message=e.message, exception=False)
+				make_shopify_log(status="Warning", exception=e, rollback=True)
 
 	def unregister_webhooks(self):
 		session = get_request_session()
 		deleted_webhooks = []
 
 		for d in self.webhooks:
-			url = get_shopify_url('admin/webhooks/{0}.json'.format(d.webhook_id), self)
+			url = get_shopify_url('admin/api/2019-04/webhooks/{0}.json'.format(d.webhook_id), self)
 			try:
 				res = session.delete(url, headers=get_header(self))
 				res.raise_for_status()
 				deleted_webhooks.append(d)
 			except Exception as e:
-				frappe.log_error(message=frappe.get_traceback(), title=e.message[:140])
+				frappe.log_error(message=frappe.get_traceback(), title=e)
 
 		for d in deleted_webhooks:
 			self.remove(d)
@@ -92,11 +76,7 @@ def get_shopify_url(path, settings):
 def get_header(settings):
 	header = {'Content-Type': 'application/json'}
 
-	if settings.app_type == "Private":
-		return header
-	else:
-		header["X-Shopify-Access-Token"] = settings.access_token
-		return header
+	return header;
 
 @frappe.whitelist()
 def get_series():
@@ -108,10 +88,18 @@ def get_series():
 
 def setup_custom_fields():
 	custom_fields = {
-		"Customer": [dict(fieldname='shopify_customer_id', label='Shopify Customer Id',
-			fieldtype='Data', insert_after='series', read_only=1, print_hide=1)],
-		"Address": [dict(fieldname='shopify_address_id', label='Shopify Address Id',
-			fieldtype='Data', insert_after='fax', read_only=1, print_hide=1)],
+		"Customer": [
+			dict(fieldname='shopify_customer_id', label='Shopify Customer Id',
+				fieldtype='Data', insert_after='series', read_only=1, print_hide=1)
+		],
+		"Supplier": [
+			dict(fieldname='shopify_supplier_id', label='Shopify Supplier Id',
+				fieldtype='Data', insert_after='supplier_name', read_only=1, print_hide=1)
+		],
+		"Address": [
+			dict(fieldname='shopify_address_id', label='Shopify Address Id',
+				fieldtype='Data', insert_after='fax', read_only=1, print_hide=1)
+		],
 		"Item": [
 			dict(fieldname='shopify_variant_id', label='Shopify Variant Id',
 				fieldtype='Data', insert_after='item_code', read_only=1, print_hide=1),
@@ -120,16 +108,20 @@ def setup_custom_fields():
 			dict(fieldname='shopify_description', label='Shopify Description',
 				fieldtype='Text Editor', insert_after='description', read_only=1, print_hide=1)
 		],
-		"Sales Order": [dict(fieldname='shopify_order_id', label='Shopify Order Id',
-			fieldtype='Data', insert_after='title', read_only=1, print_hide=1)],
+		"Sales Order": [
+			dict(fieldname='shopify_order_id', label='Shopify Order Id',
+				fieldtype='Data', insert_after='title', read_only=1, print_hide=1)
+		],
 		"Delivery Note":[
 			dict(fieldname='shopify_order_id', label='Shopify Order Id',
 				fieldtype='Data', insert_after='title', read_only=1, print_hide=1),
 			dict(fieldname='shopify_fulfillment_id', label='Shopify Fulfillment Id',
 				fieldtype='Data', insert_after='title', read_only=1, print_hide=1)
 		],
-		"Sales Invoice": [dict(fieldname='shopify_order_id', label='Shopify Order Id',
-			fieldtype='Data', insert_after='title', read_only=1, print_hide=1)]
+		"Sales Invoice": [
+			dict(fieldname='shopify_order_id', label='Shopify Order Id',
+				fieldtype='Data', insert_after='title', read_only=1, print_hide=1)
+		]
 	}
 
 	create_custom_fields(custom_fields)

@@ -70,8 +70,22 @@ frappe.query_reports["Stock Ledger"] = {
 			"label": __("Project"),
 			"fieldtype": "Link",
 			"options": "Project"
+		},
+		{
+			"fieldname":"include_uom",
+			"label": __("Include UOM"),
+			"fieldtype": "Link",
+			"options": "UOM"
 		}
-	]
+	],
+	"formatter": function (value, row, column, data, default_formatter) {
+		value = default_formatter(value, row, column, data);
+		if (column.fieldname == "out_qty" && data.out_qty < 0) {
+			value = "<span style='color:red'>" + value + "</span>";
+		}
+
+		return value;
+	},
 }
 
 // $(function() {

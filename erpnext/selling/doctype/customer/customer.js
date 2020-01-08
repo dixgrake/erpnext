@@ -3,6 +3,18 @@
 
 frappe.ui.form.on("Customer", {
 	setup: function(frm) {
+
+		frm.make_methods = {
+			'Quotation': () => frappe.model.open_mapped_doc({
+				method: "erpnext.selling.doctype.customer.customer.make_quotation",
+				frm: cur_frm
+			}),
+			'Opportunity': () => frappe.model.open_mapped_doc({
+				method: "erpnext.selling.doctype.customer.customer.make_opportunity",
+				frm: cur_frm
+			})
+		}
+
 		frm.add_fetch('lead_name', 'company_name', 'customer_name');
 		frm.add_fetch('default_sales_partner','commission_rate','default_commission_rate');
 		frm.set_query('customer_group', {'is_group': 0});
@@ -37,9 +49,9 @@ frappe.ui.form.on("Customer", {
 		})
 		frm.set_query('customer_primary_address', function(doc) {
 			return {
-				query: "erpnext.selling.doctype.customer.customer.get_customer_primary_address",
 				filters: {
-					'customer': doc.name
+					'link_doctype': 'Customer',
+					'link_name': doc.name
 				}
 			}
 		})
@@ -77,6 +89,12 @@ frappe.ui.form.on("Customer", {
 		}
 	},
 
+	loyalty_program: function(frm) {
+		if(frm.doc.loyalty_program) {
+			frm.set_value('loyalty_program_tier', null);
+		}
+	},
+
 	refresh: function(frm) {
 		if(frappe.defaults.get_default("cust_master_name")!="Naming Series") {
 			frm.toggle_display("naming_series", false);
@@ -100,6 +118,10 @@ frappe.ui.form.on("Customer", {
 				frappe.set_route('query-report', 'Accounts Receivable', {customer:frm.doc.name});
 			});
 
+			frm.add_custom_button(__('Pricing Rule'), function () {
+				erpnext.utils.make_pricing_rule(frm.doc.doctype, frm.doc.name);
+			}, __('Create'));
+
 			// indicator
 			erpnext.utils.set_party_dashboard_indicators(frm);
 
@@ -113,5 +135,6 @@ frappe.ui.form.on("Customer", {
 	},
 	validate: function(frm) {
 		if(frm.doc.lead_name) frappe.model.clear_doc("Lead", frm.doc.lead_name);
+
 	},
 });

@@ -15,8 +15,8 @@ def get_data():
 				},
 				{
 					"type": "doctype",
-					"name": "Consultation",
-					"label": _("Consultation"),
+					"name": "Patient Encounter",
+					"label": _("Patient Encounter"),
 				},
 				{
 					"type": "doctype",
@@ -26,8 +26,8 @@ def get_data():
 				},
 				{
 					"type": "page",
-					"name": "medical_record",
-					"label": _("Patient Medical Record"),
+					"name": "patient_history",
+					"label": _("Patient History"),
 				},
 				{
 					"type": "page",
@@ -38,6 +38,11 @@ def get_data():
 					"type": "doctype",
 					"name": "Clinical Procedure",
 					"label": _("Clinical Procedure"),
+				},
+				{
+					"type": "doctype",
+					"name": "Inpatient Record",
+					"label": _("Inpatient Record"),
 				}
 			]
 		},
@@ -71,16 +76,18 @@ def get_data():
 					"type": "doctype",
 					"name": "Patient",
 					"label": _("Patient"),
+					"onboard": 1,
 				},
 				{
 					"type": "doctype",
-					"name": "Physician",
-					"label": _("Physician"),
+					"name": "Healthcare Practitioner",
+					"label": _("Healthcare Practitioner"),
+					"onboard": 1,
 				},
 				{
 					"type": "doctype",
-					"name": "Physician Schedule",
-					"label": _("Physician Schedule"),
+					"name": "Practitioner Schedule",
+					"label": _("Practitioner Schedule"),
 				},
 				{
 					"type": "doctype",
@@ -91,6 +98,7 @@ def get_data():
 					"type": "doctype",
 					"name": "Medical Code",
 					"label": _("Medical Code"),
+					"onboard": 1,
 				},
 				{
 					"type": "doctype",
@@ -100,13 +108,14 @@ def get_data():
 			]
 		},
 		{
-			"label": _("Setup"),
+			"label": _("Settings"),
 			"icon": "icon-cog",
 			"items": [
 				{
 					"type": "doctype",
 					"name": "Healthcare Settings",
 					"label": _("Healthcare Settings"),
+					"onboard": 1,
 				},
 				{
 					"type": "doctype",
@@ -167,6 +176,11 @@ def get_data():
 					"type": "doctype",
 					"name": "Clinical Procedure Template",
 					"label": _("Clinical Procedure Template"),
+				},
+				{
+					"type": "doctype",
+					"name": "Healthcare Service Unit Type",
+					"label": _("Healthcare Service Unit Type")
 				}
 			]
 		}

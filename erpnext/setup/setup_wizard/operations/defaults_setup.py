@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 import frappe
 from frappe import _
 from frappe.utils import cstr, getdate
-from frappe.core.doctype.communication.comment import add_info_comment
 
 def set_default_settings(args):
 	# enable default currency
@@ -44,6 +43,7 @@ def set_default_settings(args):
 	selling_settings.so_required = "No"
 	selling_settings.dn_required = "No"
 	selling_settings.allow_multiple_items = 1
+	selling_settings.sales_update_frequency = "Each Transaction"
 	selling_settings.save()
 
 	buying_settings = frappe.get_doc("Buying Settings")
@@ -54,10 +54,14 @@ def set_default_settings(args):
 	buying_settings.allow_multiple_items = 1
 	buying_settings.save()
 
+	delivery_settings = frappe.get_doc("Delivery Settings")
+	delivery_settings.dispatch_template = _("Dispatch Notification")
+	delivery_settings.save()
+
 	hr_settings = frappe.get_doc("HR Settings")
 	hr_settings.emp_created_by = "Naming Series"
-	hr_settings.leave_approval_notification_template = "Leave Approval Notification"
-	hr_settings.leave_status_notification_template = "Leave Status Notification"
+	hr_settings.leave_approval_notification_template = _("Leave Approval Notification")
+	hr_settings.leave_status_notification_template = _("Leave Status Notification")
 	hr_settings.save()
 
 def set_no_copy_fields_in_variant_settings():
@@ -109,9 +113,7 @@ def create_territories():
 
 def create_feed_and_todo():
 	"""update Activity feed and create todo for creation of item, customer, vendor"""
-	add_info_comment(**{
-		"subject": _("ERPNext Setup Complete!")
-	})
+	return
 
 def get_fy_details(fy_start_date, fy_end_date):
 	start_year = getdate(fy_start_date).year

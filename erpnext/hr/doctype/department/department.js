@@ -4,9 +4,9 @@
 frappe.ui.form.on('Department', {
 	refresh: function(frm) {
 		// read-only for root department
-		if(!frm.doc.parent_department) {
-			cur_frm.set_read_only();
-			cur_frm.set_intro(__("This is a root customer group and cannot be edited."));
+		if(!frm.doc.parent_department && !frm.is_new()) {
+			frm.set_read_only();
+			frm.set_intro(__("This is a root department and cannot be edited."));
 		}
 	},
 	validate: function(frm) {
